@@ -1,8 +1,7 @@
 import { b as base, a as assets, o as override, r as reset, p as public_env, s as safe_public_env, c as options, d as set_private_env, e as prerendering, f as set_public_env, g as get_hooks, h as set_safe_public_env } from "./chunks/internal.js";
-import { t as text, j as json } from "./chunks/index.js";
 import { m as make_trackable, d as disable_search, n as normalize_path, a as add_data_suffix, r as resolve, b as decode_pathname, h as has_data_suffix, s as strip_data_suffix, c as decode_params, v as validate_layout_server_exports, e as validate_layout_exports, f as validate_page_server_exports, g as validate_page_exports, i as validate_server_exports } from "./chunks/exports.js";
 import * as devalue from "devalue";
-import { r as readable, w as writable } from "./chunks/index2.js";
+import { r as readable, w as writable } from "./chunks/index.js";
 import { parse, serialize } from "cookie";
 import * as set_cookie_parser from "set-cookie-parser";
 const DEV = false;
@@ -106,6 +105,36 @@ class ActionFailure {
     this.status = status;
     this.data = data;
   }
+}
+function json(data, init2) {
+  const body2 = JSON.stringify(data);
+  const headers2 = new Headers(init2?.headers);
+  if (!headers2.has("content-length")) {
+    headers2.set("content-length", encoder$3.encode(body2).byteLength.toString());
+  }
+  if (!headers2.has("content-type")) {
+    headers2.set("content-type", "application/json");
+  }
+  return new Response(body2, {
+    ...init2,
+    headers: headers2
+  });
+}
+const encoder$3 = new TextEncoder();
+function text(body2, init2) {
+  const headers2 = new Headers(init2?.headers);
+  if (!headers2.has("content-length")) {
+    const encoded = encoder$3.encode(body2);
+    headers2.set("content-length", encoded.byteLength.toString());
+    return new Response(encoded, {
+      ...init2,
+      headers: headers2
+    });
+  }
+  return new Response(body2, {
+    ...init2,
+    headers: headers2
+  });
 }
 function coalesce_to_error(err) {
   return err instanceof Error || err && /** @type {any} */

@@ -1,6 +1,6 @@
 import { c as create_ssr_component, e as escape, a as add_attribute, b as compute_slots, d as subscribe, v as validate_component } from "../../chunks/ssr.js";
 import hljs from "highlight.js/lib/core";
-import { w as writable } from "../../chunks/index2.js";
+import { w as writable } from "../../chunks/index.js";
 import { m as modeCurrent, s as setInitialClassState } from "../../chunks/ProgressBar.svelte_svelte_type_style_lang.js";
 import xml from "highlight.js/lib/languages/xml";
 import css from "highlight.js/lib/languages/css";

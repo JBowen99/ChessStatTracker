@@ -1,4 +1,4 @@
-import { w as writable, r as readable } from "./index2.js";
+import { w as writable, r as readable } from "./index.js";
 import { f as get_store_value } from "./ssr.js";
 const stores = {};
 function localStorageStore(key, initialValue, options) {

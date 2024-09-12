@@ -23,13 +23,9 @@
 
 	import { AppBar } from '@skeletonlabs/skeleton';
 	import logo from '$lib/assets/logo3.svg';
-	import { CircleUserRound } from 'lucide-svelte';
 	import { LightSwitch } from '@skeletonlabs/skeleton';
 
-	import { popup } from '@skeletonlabs/skeleton';
 	import type { PopupSettings } from '@skeletonlabs/skeleton';
-
-	import { user } from '$lib/user';
 
 	const popupFeatured: PopupSettings = {
 		// Represents the type of event that opens/closed the popup
@@ -52,27 +48,9 @@
 	</div>
 	<svelte:fragment slot="trail"
 		><div class="flex flex-row">
-			<button use:popup={popupFeatured}><CircleUserRound class="mx-3" /></button>
 			<LightSwitch />
-			<div class="card p-4 shadow-xl" data-popup="popupFeatured">
-				<div>
-					{#if $user}
-						<div class="flex flex-col justify-start items-start space-y-3">
-							<span>Logged in as: {$user.name}</span>
-							<button
-								type="button"
-								class="btn btn-sm variant-ghost hover:variant-filled-primary ml-auto"
-								on:click={user.logout}>Logout</button
-							>
-						</div>
-					{:else}
-						<a href="/login">Login</a>
-					{/if}
-				</div>
-				<div class="arrow bg-surface-100-800-token" />
-			</div>
-		</div></svelte:fragment
-	></AppBar
->
+		</div>
+	</svelte:fragment>
+</AppBar>
 
 <slot />

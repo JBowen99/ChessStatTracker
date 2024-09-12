@@ -6,8 +6,13 @@
 	import RatingChart from '$lib/RatingChart.svelte';
 	import { ProgressBar } from '@skeletonlabs/skeleton';
 	import ActivityGrid from '$lib/ActivityGrid.svelte';
-	import { getPlayerStats } from '$lib/chessPlayer';
-	import { fetchMonthlyGames, fetchUserStats, processOpenings, processResults } from '$lib/api';
+	import {
+		fetchMonthlyGames,
+		fetchUserStats,
+		processOpenings,
+		processRecentGames,
+		processResults
+	} from '$lib/api';
 	import { ChartNoAxesColumnDecreasing, History, TrendingUp } from 'lucide-svelte';
 	import WinChart from '$lib/WinChart.svelte';
 	import OpeningChart from '$lib/OpeningChart.svelte';
@@ -81,8 +86,10 @@
 
 	import { results } from '../stores/dataStore';
 	import RecentMatchesTable from '$lib/RecentMatchesTable.svelte';
+	import InfoButton from '$lib/InfoButton.svelte';
 	let resultsData = [];
 	let openingData = [];
+	let recentGames = [];
 
 	async function updateData() {
 		let activityData = await processRatingData(username, gameData.currentMonth ?? null, time_class);
@@ -98,9 +105,12 @@
 			});
 		}
 
+		recentGames = await processRecentGames(username, currentData ?? null, time_class);
+		console.log('recent games2:', recentGames);
 		resultsData = await processResults(username, currentData ?? null, time_class);
 
 		openingData = await processOpenings(username, currentData ?? null, time_class);
+		console.log('opening data, ', openingData);
 
 		stats = await processRatingData(username, currentData ?? null, time_class);
 		if (stats?.length == 0) {
@@ -145,7 +155,7 @@
 
 <div class=" h-full w-full flex justify-center items-center">
 	<div class="flex flex-col items-center w-full">
-		<h1 class="h1 pt-10 mb-5">Enter your Chess.com Username</h1>
+		<h1 class="h3 pt-10 mb-5">Enter your Chess.com Username</h1>
 		<div class="flex flex-row">
 			<label class="label">
 				<input class="input" type="text" bind:value={username} placeholder="username" />
@@ -245,8 +255,11 @@
 					</div>
 					<div class="h-full card p-3 col-span-3">
 						<div class="card-header flex flex-row justify-center items-center my-3">
-							<TrendingUp class="mx-3" />
-							<h1 class="h5">Rating</h1>
+							<TrendingUp color="#b80f42" class="mx-3" />
+							<h1 class="h4 mr-2">Rating</h1>
+							<InfoButton
+								infoText="Shows your rating over time for the selected game mode and time frame"
+							/>
 						</div>
 						<div>
 							{#if stats?.length >= 1}
@@ -266,11 +279,14 @@
 					</div>
 					<div class="h-full card p-3 col-span-3">
 						<div class="flex flex-row justify-center items-center my-3">
-							<ChartNoAxesColumnDecreasing class="mx-3" />
-							<h1 class="h5">Opening Performance</h1>
+							<ChartNoAxesColumnDecreasing color="#b80f42" class="mx-3" />
+							<h1 class="h4 mr-2">Opening Performance</h1>
+							<InfoButton
+								infoText="Shows the performance of your most played openings for the selected game mode and time frame"
+							/>
 						</div>
 						<div>
-							<OpeningChart />
+							<OpeningChart data={openingData} />
 						</div>
 					</div>
 				</div>
@@ -278,11 +294,12 @@
 				<div class="grid grid-cols-4 gap-3 my-3 w-full px-10">
 					<div class="h-full card p-3 col-span-4">
 						<div class="flex flex-row justify-center items-center my-3">
-							<History class="mx-3" />
-							<h1 class="h5">Recent Matches</h1>
+							<History color="#b80f42" class="mx-3" />
+							<h1 class="h4 mr-2">Recent Matches</h1>
+							<InfoButton infoText="Shows recent games for the selected game mode" />
 						</div>
 						<div>
-							<RecentMatchesTable data={}/>
+							<RecentMatchesTable data={recentGames} />
 						</div>
 					</div>
 				</div>

@@ -32,6 +32,7 @@
 	<table class="table table-hover">
 		<thead>
 			<tr>
+				<th>Date</th>
 				<th>Result</th>
 				<th>Rating</th>
 				<th class="text-wrap">Opponent Rating</th>
@@ -43,11 +44,14 @@
 		<tbody>
 			{#each data as row, i}
 				<tr>
-					<td class="text-secondary-500">{row.win}</td>
-					<td>{row.type}</td>
+					<td>{row.date}</td>
+					<td class={row.result === 'win' ? 'text-secondary-700' : 'text-primary-500'}
+						>{row.result}</td
+					>
+					<td>{row.rating}</td>
+					<td>{row.ratingOpponent}</td>
+					<td>{row.time_class}</td>
 					<td>{row.color}</td>
-					<td>{row.opening}</td>
-					<td>{row.opening}</td>
 					<td>{row.opening}</td>
 				</tr>
 			{/each}

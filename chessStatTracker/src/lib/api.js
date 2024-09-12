@@ -254,8 +254,74 @@ export async function processResults(username, dataToProcess, time_class) {
 	}
 }
 
+const parseECOUrl = (data) => {
+	const ecoUrlMatch = data.match(/\[ECOUrl "(.*?)"\]/);
+	if (ecoUrlMatch && ecoUrlMatch[1]) {
+		const urlParts = ecoUrlMatch[1].split('/');
+		return urlParts[urlParts.length - 1].replace(/-/g, ' ');
+	}
+	return null;
+};
+
 export async function processOpenings(username, dataToProcess, time_class) {
 	console.log('processing openings');
+	//openings = [];
+	let openingStats = {};
+	//process each game and aggreagate ratings
+	if (dataToProcess != null) {
+		if (dataToProcess.length > 0) {
+			dataToProcess.forEach((game) => {
+				if (game.time_class == time_class) {
+					const openingName = parseECOUrl(game.pgn);
+
+					// Check win result for the specified username
+					const win =
+						game.white.username.toLowerCase() === username.toLowerCase()
+							? game.white.result
+							: game.black.result;
+
+					// Initialize the stats for the opening if not present
+					if (!openingStats[openingName]) {
+						openingStats[openingName] = { games: 0, wins: 0 };
+					}
+
+					// Update games count
+					openingStats[openingName].games++;
+
+					// Update wins count if the game was won
+					if (win === 'win') {
+						openingStats[openingName].wins++;
+					}
+				}
+			});
+
+			// Calculate win rates and format results
+			const results = Object.keys(openingStats).map((opening) => {
+				const stats = openingStats[opening];
+				const winRate = (stats.wins / stats.games) * 100;
+				return {
+					opening,
+					winRate: winRate, //winRate.toFixed(2) + '%',
+					gamesPlayed: stats.games,
+					wins: stats.wins
+				};
+			});
+
+			// Sort first by games played (descending), then by win rate (descending)
+			return results.sort((a, b) => {
+				if (b.gamesPlayed === a.gamesPlayed) {
+					return b.winRate - a.winRate; // Sort by win rate if games played are equal
+				}
+				return b.gamesPlayed - a.gamesPlayed; // Sort by games played
+			});
+		} else {
+			console.log('data not longer than 1');
+			return null;
+		}
+	} else {
+		console.log('data is null');
+		return null;
+	}
 }
 
 export async function processRatingData(username, dataToProcess, time_class) {
@@ -320,6 +386,64 @@ export async function processRatingData(username, dataToProcess, time_class) {
 			console.log('aggregated ratings: ', aggregatedRatings);
 
 			return aggregatedRatings;
+		} else {
+			console.log('data not longer than 1');
+			return null;
+		}
+	} else {
+		console.log('data is null');
+		return null;
+	}
+}
+
+export async function processRecentGames(username, dataToProcessTotal, time_class) {
+	//process data
+	const recent = [];
+	const dataToProcess = dataToProcessTotal?.slice(0, 10) ?? [];
+
+	//process each game and aggreagate ratings
+	if (dataToProcess != null) {
+		if (dataToProcess.length > 0) {
+			dataToProcess.forEach((game) => {
+				if (game.time_class == time_class) {
+					const date = new Date(game.end_time * 1000).toLocaleDateString('en-GB');
+
+					const rating =
+						game.white.username.toLowerCase() === username.toLowerCase()
+							? game.white.rating
+							: game.black.rating;
+					const ratingOpponent =
+						game.white.username.toLowerCase() === username.toLowerCase()
+							? game.black.rating
+							: game.white.rating;
+
+					const result =
+						game.white.username.toLowerCase() === username.toLowerCase()
+							? game.white.result
+							: game.black.result;
+
+					const color =
+						game.white.username.toLowerCase() === username.toLowerCase() ? 'white' : 'black';
+
+					const opening = parseECOUrl(game.pgn);
+
+					recent.push({
+						date,
+						rating,
+						ratingOpponent,
+						result,
+						time_class,
+						color,
+						opening
+					});
+				}
+			});
+			console.log('recent games: ', recent);
+
+			//sort ratings by date
+			recent.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+			return recent;
 		} else {
 			console.log('data not longer than 1');
 			return null;

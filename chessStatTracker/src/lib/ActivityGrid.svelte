@@ -2,6 +2,7 @@
 	import { Calendar } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import Page from '../routes/+page.svelte';
+	import InfoButton from './InfoButton.svelte';
 
 	export let activity = [];
 
@@ -97,9 +98,10 @@
 	});
 </script>
 
-<div class="flex flex-row space-x-2 mt-3 mb-5">
+<div class="flex flex-row items-center space-x-2 mt-3 mb-5">
 	<Calendar color="#b80f42" />
-	<h1>Monthly Activity</h1>
+	<h1 class="h4">Monthly Activity</h1>
+	<InfoButton infoText="Shows your activity and win rate during the current month" />
 </div>
 
 <div class="flex flex-row justify-center space-x-2 my-5">

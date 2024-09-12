@@ -29,14 +29,18 @@
 
 	import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale } from 'chart.js';
 	import { Trophy } from 'lucide-svelte';
+	import InfoButton from './InfoButton.svelte';
 
 	ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale);
 </script>
 
 <div class="flex flex-col">
-	<div class="flex flex-row items-center space-x-2">
+	<div class="flex flex-row items-center justify-start space-x-2 mt-3 mb-5">
 		<Trophy color="#b80f42" />
-		<h1 class="h5 mt-3 mb-5">Game Results</h1>
+		<h1 class="h4">Game Results</h1>
+		<InfoButton
+			infoText="Shows a break down of the game results for the selected game mode and time frame"
+		/>
 	</div>
 	<div class="my-3">
 		<Doughnut data={chartData} {options} />

@@ -42,7 +42,7 @@
 			infoText="Shows a break down of the game results for the selected game mode and time frame"
 		/>
 	</div>
-	<div class="my-3">
+	<div class="my-3 flex flex-row justify-center items-center">
 		<Doughnut data={chartData} {options} />
 	</div>
 	<div class="grid grid-cols-4 mt-5 space-y-3 px-5">

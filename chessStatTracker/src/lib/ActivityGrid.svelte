@@ -12,21 +12,6 @@
 		active = buttonId;
 	}
 
-	/*
-	// Create a date object for the first day of the current month
-	const now = new Date();
-	const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-	// Get the day of the week for the first day of the current month
-	const dayOfWeek = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-
-	// Create a date object for the first day of the next month
-	const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-	// Get the total number of days in the current month
-	const totalDays = new Date(nextMonth - 1).getDate();
-	*/
-
 	let daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 	let days = [];
 	let calendar = [];
@@ -172,8 +157,8 @@
 	</div>
 </div>
 {#if active == 'games'}
-	<div class="grid grid-cols-5 mt-5">
-		<h1 class="h5">Games Played:</h1>
+	<h1 class="h5 mt-5 flex flex-row w-full justify-center items-center">Games Played</h1>
+	<div class="grid grid-cols-4 mt-2">		
 		<div class="flex flex-col items-center justify-center">
 			<div class="w-[24px] h-[24px] bg-primary-900 rounded-md"></div>
 			<h1 class="h6">1</h1>
@@ -192,8 +177,9 @@
 		</div>
 	</div>
 {:else}
-	<div class="grid grid-cols-5 space-x-2 mt-5">
-		<h1 class="h5">Win Rate:</h1>
+	<h1 class="h5 mt-5 flex flex-row w-full justify-center items-center">Win Rate</h1>
+	<div class="grid grid-cols-4 space-x-2 mt-2">
+		
 		<div class="flex flex-col items-center justify-center">
 			<div class="w-[24px] h-[24px] bg-secondary-900 rounded-md"></div>
 			<h1 class="h6">25%</h1>

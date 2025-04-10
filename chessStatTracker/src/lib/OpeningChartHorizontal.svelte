@@ -4,6 +4,7 @@
 	export let data = {};
 
 	let options = {
+		indexAxis: 'y', // This makes the chart horizontal
 		responsive: true,
 		maintainAspectRatio: false,
 		plugins: {
@@ -13,22 +14,23 @@
 		},
 		scales: {
 			x: {
-				ticks: {
-					maxRotation: 45,
-					minRotation: 45,
-					callback: function(value) {
-						const label = this.getLabelForValue(value);
-						// Truncate long opening names
-						return label.length > 15 ? label.substr(0, 13) + '...' : label;
-					}
-				}
-			},
-			y: {
 				min: 0,
 				max: 100,
 				ticks: {
 					callback: function(value) {
 						return value + '%';
+					}
+				}
+			},
+			y: {
+				ticks: {
+					autoSkip: false,
+					maxRotation: 0,
+					minRotation: 0,
+					callback: function(value) {
+						const label = this.getLabelForValue(value);
+						// Truncate long opening names
+						return label.length > 25 ? label.substr(0, 23) + '...' : label;
 					}
 				}
 			}
@@ -52,7 +54,7 @@
 		return `rgb(${r},${g},${b})`;
 	}
 
-	$: top10Data = data?.slice(0, 8) ?? {}; // Reduced to top 8 for better readability
+	$: top10Data = data?.slice(0, 10) ?? {}; // Reduced to top 10 for better readability
 
 	$: chartData = {
 		labels: top10Data?.map((item) => item.opening) ?? [],
@@ -66,11 +68,10 @@
 	};
 
 	import { Chart, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js';
-	import Page from '../routes/+page.svelte';
 
 	Chart.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 </script>
 
 <div class="w-full h-[400px]">
 	<Bar data={chartData} {options} />
-</div>
+</div> 

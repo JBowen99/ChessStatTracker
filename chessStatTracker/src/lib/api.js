@@ -8,10 +8,11 @@ export async function fetchUserStats(username) {
 
 export async function fetchUserProfile(username) {
 	const response = await fetch(`https://api.chess.com/pub/player/${username}`);
-	if (!response.ok) {
+	if (response.ok) {
+		return response.json();		
+	} else {
 		throw new Error('Failed to fetch user stats');
-	}
-	return response.json();
+	}	
 }
 
 export async function fetchMonthlyGames(username, year, month) {
@@ -265,63 +266,98 @@ const parseECOUrl = (data) => {
 
 export async function processOpenings(username, dataToProcess, time_class) {
 	console.log('processing openings');
-	//openings = [];
 	let openingStats = {};
-	//process each game and aggreagate ratings
 	if (dataToProcess != null) {
 		if (dataToProcess.length > 0) {
 			dataToProcess.forEach((game) => {
 				if (game.time_class == time_class) {
 					const openingName = parseECOUrl(game.pgn);
+					const isWhite = game.white.username.toLowerCase() === username.toLowerCase();
+					const win = isWhite ? game.white.result : game.black.result;
 
-					// Check win result for the specified username
-					const win =
-						game.white.username.toLowerCase() === username.toLowerCase()
-							? game.white.result
-							: game.black.result;
-
-					// Initialize the stats for the opening if not present
 					if (!openingStats[openingName]) {
-						openingStats[openingName] = { games: 0, wins: 0 };
+						openingStats[openingName] = {
+							games: 0,
+							wins: 0,
+							whiteGames: 0,
+							whiteWins: 0,
+							blackGames: 0,
+							blackWins: 0
+						};
 					}
 
-					// Update games count
 					openingStats[openingName].games++;
-
-					// Update wins count if the game was won
-					if (win === 'win') {
-						openingStats[openingName].wins++;
+					if (isWhite) {
+						openingStats[openingName].whiteGames++;
+						if (win === 'win') openingStats[openingName].whiteWins++;
+					} else {
+						openingStats[openingName].blackGames++;
+						if (win === 'win') openingStats[openingName].blackWins++;
 					}
+					if (win === 'win') openingStats[openingName].wins++;
 				}
 			});
 
-			// Calculate win rates and format results
 			const results = Object.keys(openingStats).map((opening) => {
 				const stats = openingStats[opening];
-				const winRate = (stats.wins / stats.games) * 100;
 				return {
 					opening,
-					winRate: winRate, //winRate.toFixed(2) + '%',
+					winRate: (stats.wins / stats.games) * 100,
+					whiteWinRate: (stats.whiteWins / stats.whiteGames) * 100 || 0,
+					blackWinRate: (stats.blackWins / stats.blackGames) * 100 || 0,
 					gamesPlayed: stats.games,
+					whiteGames: stats.whiteGames,
+					blackGames: stats.blackGames,
 					wins: stats.wins
 				};
 			});
 
-			// Sort first by games played (descending), then by win rate (descending)
 			return results.sort((a, b) => {
 				if (b.gamesPlayed === a.gamesPlayed) {
-					return b.winRate - a.winRate; // Sort by win rate if games played are equal
+					return b.winRate - a.winRate;
 				}
-				return b.gamesPlayed - a.gamesPlayed; // Sort by games played
+				return b.gamesPlayed - a.gamesPlayed;
 			});
-		} else {
-			console.log('data not longer than 1');
-			return null;
 		}
-	} else {
-		console.log('data is null');
-		return null;
 	}
+	return null;
+}
+
+export async function processRivals(username, dataToProcess, time_class) {
+	if (!dataToProcess?.length) return [];
+	
+	const rivals = dataToProcess.reduce((acc, game) => {
+		if (game.time_class !== time_class) return acc;
+		
+		const isWhite = game.white.username.toLowerCase() === username.toLowerCase();
+		const opponent = isWhite ? game.black.username : game.white.username;
+		const result = isWhite ? game.white.result : game.black.result;
+		const otherResult = isWhite ? game.black.result : game.white.result;
+		
+		// Initialize opponent stats if not exists
+		if (!acc[opponent]) {
+			acc[opponent] = { wins: 0, losses: 0, total: 0 };
+		}
+		
+		// Update stats based on result
+		if (result === 'win') {
+			acc[opponent].wins++;
+		} else if (result === 'checkmated' || result === 'timeout' || 
+				   result === 'resigned' || result === 'abandoned') {
+			acc[opponent].losses++;
+		}
+		// Don't count draws in wins/losses
+		
+		acc[opponent].total++;
+		return acc;
+	}, {});
+
+	// Convert to array format
+	return Object.entries(rivals).map(([opponent, stats]) => ({
+		opponent,
+		result: 'processed', // Dummy result to satisfy component structure
+		stats
+	}));
 }
 
 export async function processRatingData(username, dataToProcess, time_class) {

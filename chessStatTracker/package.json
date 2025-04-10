@@ -8,8 +8,9 @@
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "lint": "prettier --check .",
-    "format": "prettier --write ."
+    "lint": "prettier --check . && eslint .",
+    "format": "prettier --write .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
     "@skeletonlabs/skeleton": "2.10.2",
@@ -21,7 +22,12 @@
     "@tailwindcss/forms": "0.5.8",
     "@tailwindcss/typography": "0.5.15",
     "@types/node": "22.5.4",
+    "@typescript-eslint/eslint-plugin": "^8.29.1",
+    "@typescript-eslint/parser": "^8.29.1",
     "autoprefixer": "10.4.20",
+    "eslint": "^9.24.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-svelte": "^3.5.1",
     "postcss": "8.4.45",
     "prettier": "^3.1.1",
     "prettier-plugin-svelte": "^3.1.2",

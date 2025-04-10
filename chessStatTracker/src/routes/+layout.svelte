@@ -37,6 +37,7 @@
 	};
 </script>
 
+<div class="h-screen w-full flex flex-col scrollbar-hide">
 <AppBar
 	><svelte:fragment slot="lead"
 		><div style="width: 24px; height: 24px;">
@@ -54,3 +55,4 @@
 </AppBar>
 
 <slot />
+</div>

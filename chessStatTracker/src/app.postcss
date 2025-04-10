@@ -2,3 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 @tailwind variants;
+
+@layer components {
+  .scrollbar-hide {
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hide scrollbar for IE and Edge */
+    -ms-overflow-style: none; 
+    /* Hide scrollbar for Firefox */
+    scrollbar-width: none; 
+  }
+}
+
+@keyframes gradientPulse {
+  0% {
+    transform: translateY(75%) scale(1);
+  }
+  50% {
+    transform: translateY(75%) scale(1.2);
+  }
+  100% {
+    transform: translateY(75%) scale(1);
+  }
+}
+
+.animate-gradient {
+  animation: gradientPulse 5s ease-in-out infinite;
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-red-200 bg-opacity-10 backdrop-blur-lg rounded-lg border border-white border-opacity-20 shadow-lg dark:bg-slate-900 dark:bg-opacity-50 dark:border-white dark:border-opacity-30;
+  }
+}
+

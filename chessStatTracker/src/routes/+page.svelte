@@ -11,6 +11,7 @@
 	import ActivityGrid from '$lib/ActivityGrid.svelte';
 	import BestOpenings from '$lib/BestOpenings.svelte';
 	import Rivals from '$lib/Rivals.svelte';
+	import PromoCard from '$lib/PromoCard.svelte';
 
 	// Import API utility functions for fetching and processing chess data
 	import {
@@ -203,9 +204,9 @@
 </script>
 
 <!-- Main container -->
-<div class="h-full w-full flex justify-center items-center relative overflow-hidden scrollbar-hide">
+<div class="h-screen w-full flex justify-center items-center relative overflow-hidden scrollbar-hide">
 	<div class="z-0 absolute bottom-0 left-0 w-full h-3/4 rounded-full bg-gradient-to-b dark:from-red-500 dark:to-rose-200 from-rose-200 to-red-500 blur-3xl animate-gradient"></div>
-	<div class="z-50 absolute top-0 left-0 flex flex-col items-center w-full h-full {(initialized && site_error == null) ? '' : 'justify-center pb-20'} overflow-scroll scrollbar-hide">
+	<div class="z-50 absolute top-0 left-0 flex flex-col items-center w-full h-full {(initialized && site_error == null) ? '' : 'justify-center pb-10'} overflow-scroll scrollbar-hide">
 		
 		<!-- Username input section -->
 		<h1 class="h3 pt-10 mb-5">Enter your Chess.com Username</h1>
@@ -413,8 +414,26 @@
 							</div>
 						</div>
 					</div>
+
+					<!-- Promotional section -->
+					<div class="grid grid-cols-1 gap-3">
+						<PromoCard />
+					</div>
+					
+					<!-- Footer section -->
+					<div class="z-50 pb-4 px-4 mt-auto flex flex-row justify-center items-center text-center text-sm text-gray-800">
+						<p> ChessStatTracker <br class="block md:hidden"/> by Silver Stag Studios, LLC - Copyright {new Date().getFullYear()}</p>
+					</div>
+					
 				</div>
 			</div>
 		{/if}
+		
 	</div>
+	{#if !initialized}
+		<!-- Footer section -->
+		<div class="z-50 pb-4 px-4 mt-auto flex flex-row justify-center items-center text-center text-sm text-gray-800">
+			<p> ChessStatTracker <br class="block md:hidden"/> by Silver Stag Studios, LLC - Copyright {new Date().getFullYear()}</p>
+		</div>
+	{/if}
 </div>

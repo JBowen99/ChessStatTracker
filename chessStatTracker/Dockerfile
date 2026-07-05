@@ -16,13 +16,16 @@ COPY . .
 RUN pnpm run build
 
 FROM base AS runner
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl libc6-compat
 WORKDIR /app
 
 ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs \
 	&& adduser --system --uid 1001 sveltekit
+
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+RUN pnpm install --prod --frozen-lockfile
 
 COPY --from=builder /app/build ./build
 RUN chown -R sveltekit:nodejs /app

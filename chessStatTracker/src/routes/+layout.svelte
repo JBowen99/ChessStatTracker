@@ -24,35 +24,24 @@
 	import { AppBar } from '@skeletonlabs/skeleton';
 	import logo from '$lib/assets/logo3.svg';
 	import { LightSwitch } from '@skeletonlabs/skeleton';
-
-	import type { PopupSettings } from '@skeletonlabs/skeleton';
-
-	const popupFeatured: PopupSettings = {
-		// Represents the type of event that opens/closed the popup
-		event: 'click',
-		// Matches the data-popup value on your popup element
-		target: 'popupFeatured',
-		// Defines which side of your trigger the popup will appear
-		placement: 'bottom'
-	};
 </script>
 
 <div class="h-screen w-full flex flex-col scrollbar-hide">
-<AppBar
-	><svelte:fragment slot="lead"
-		><div style="width: 24px; height: 24px;">
-			<img src={logo} alt="Logo" style="width: 100%; height: 100%; object-fit: contain;" />
-		</div></svelte:fragment
-	>
-	<div class="flex flex-row items-center">
-		<h1 class="h5 mx-3">Chess Stat Tracker</h1>
-	</div>
-	<svelte:fragment slot="trail"
-		><div class="flex flex-row">
-			<LightSwitch />
+	<AppBar
+		><svelte:fragment slot="lead"
+			><div style="width: 24px; height: 24px;">
+				<img src={logo} alt="Logo" style="width: 100%; height: 100%; object-fit: contain;" />
+			</div></svelte:fragment
+		>
+		<div class="flex flex-row items-center">
+			<h1 class="h5 mx-3">Chess Stat Tracker</h1>
 		</div>
-	</svelte:fragment>
-</AppBar>
+		<svelte:fragment slot="trail"
+			><div class="flex flex-row">
+				<LightSwitch />
+			</div>
+		</svelte:fragment>
+	</AppBar>
 
-<slot />
+	<slot />
 </div>

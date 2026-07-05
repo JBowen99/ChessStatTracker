@@ -1,86 +1,47 @@
-<script>
+<script lang="ts">
 	import { Calendar } from 'lucide-svelte';
-	import { onMount } from 'svelte';
-	import Page from '../routes/+page.svelte';
 	import InfoButton from './InfoButton.svelte';
+	import type { ActivityDay } from './chess.types';
 
-	export let activity = [];
+	export let activity: ActivityDay[] = [];
 
 	let active = 'games';
 
-	function setActive(buttonId) {
+	function setActive(buttonId: string) {
 		active = buttonId;
 	}
 
-	let daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-	let days = [];
-	let calendar = [];
+	const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	let calendar: ({ day: number; data: { activity: number; winRate: number } } | null)[][] = [];
 
-	$: updateData(activity);
+	$: buildCalendar(activity);
 
-	function updateData(dataset) {
-		// Get the current date info
+	function buildCalendar(dataset: ActivityDay[]) {
 		const now = new Date();
 		const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 		const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-		const startDay = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, etc.
+		const startDay = firstDayOfMonth.getDay();
 
-		// Create empty blocks until the first day of the month
-		let calendarDays = Array(startDay).fill(null);
+		const calendarDays: ({ day: number; data: { activity: number; winRate: number } } | null)[] =
+			Array(startDay).fill(null);
 
-		// Convert the array of days to a Map for quick lookup
 		const daysWithActivities = new Map(
-			activity.map((item) => [item.day, { activity: item.activity, winRate: item.winRate }])
+			dataset.map((item) => [item.day, { activity: item.activity, winRate: item.winRate }])
 		);
 
-		// Create day blocks for the days of the month
 		for (let day = 1; day <= totalDays; day++) {
-			let newData = daysWithActivities.get(day);
-			calendarDays.push({ day, data: newData || { activity: 0, winRate: 0 } });
+			const dayData = daysWithActivities.get(day);
+			calendarDays.push({ day, data: dayData ?? { activity: 0, winRate: 0 } });
 		}
 
-		// Fill the remaining cells to complete the last week
 		while (calendarDays.length % 7 !== 0) {
 			calendarDays.push(null);
 		}
 
-		// Rearrange days into columns under each day of the week
 		calendar = daysOfWeek.map((_, i) =>
 			calendarDays.filter((_, index) => (index - startDay) % 7 === i)
 		);
 	}
-
-	onMount(() => {
-		// Get the current date info
-		const now = new Date();
-		const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-		const startDay = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, etc.
-
-		// Create empty blocks until the first day of the month
-		let calendarDays = Array(startDay).fill(null);
-
-		// Convert the array of days to a Map for quick lookup
-		const daysWithActivities = new Map(
-			activity.map((item) => [item.day, { activity: item.activity, winRate: item.winRate }])
-		);
-
-		// Create day blocks for the days of the month
-		for (let day = 1; day <= totalDays; day++) {
-			let newData = daysWithActivities.get(day);
-			calendarDays.push({ day, data: newData || { activity: 0, winRate: 0 } });
-		}
-
-		// Fill the remaining cells to complete the last week
-		while (calendarDays.length % 7 !== 0) {
-			calendarDays.push(null);
-		}
-
-		// Rearrange days into columns under each day of the week
-		calendar = daysOfWeek.map((_, i) =>
-			calendarDays.filter((_, index) => (index - startDay) % 7 === i)
-		);
-	});
 </script>
 
 <div class="flex flex-row items-center space-x-2 mt-3 mb-5">
@@ -103,22 +64,15 @@
 <div class="grid grid-cols-6 gap-2">
 	<!-- Days of the Week (header) -->
 	<div class="grid grid-rows-7 gap-2">
-		{#each daysOfWeek as day}
+		{#each daysOfWeek as day (day)}
 			<div class="text-center font-bold">{day}</div>
 		{/each}
 	</div>
 	<div class="grid grid-rows-7 gap-2 grid-flow-col col-span-5">
-		{#each calendar as row}
+		{#each calendar as row, rowIndex (rowIndex)}
 			<div class="grid grid-cols-5">
-				{#each row as day}
+				{#each row as day, dayIndex (`${rowIndex}-${dayIndex}`)}
 					{#if day != null}
-						<!--
-						{#if day.activity > 0}
-							<div class="w-[24px] h-[24px] bg-primary-500 rounded-md"></div>
-						{:else}
-							<div class="w-[24px] h-[24px] bg-surface-500 rounded-md"></div>
-						{/if}
-					-->
 						{#if active == 'games'}
 							<div
 								class={`w-[24px] h-[24px] rounded-md ${
@@ -158,7 +112,7 @@
 </div>
 {#if active == 'games'}
 	<h1 class="h5 mt-5 flex flex-row w-full justify-center items-center">Games Played</h1>
-	<div class="grid grid-cols-4 mt-2">		
+	<div class="grid grid-cols-4 mt-2">
 		<div class="flex flex-col items-center justify-center">
 			<div class="w-[24px] h-[24px] bg-primary-900 rounded-md"></div>
 			<h1 class="h6">1</h1>
@@ -179,7 +133,6 @@
 {:else}
 	<h1 class="h5 mt-5 flex flex-row w-full justify-center items-center">Win Rate</h1>
 	<div class="grid grid-cols-4 space-x-2 mt-2">
-		
 		<div class="flex flex-col items-center justify-center">
 			<div class="w-[24px] h-[24px] bg-secondary-900 rounded-md"></div>
 			<h1 class="h6">25%</h1>

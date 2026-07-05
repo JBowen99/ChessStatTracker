@@ -1,31 +1,5 @@
 <script>
 	export let data = [];
-	const testdata = [
-		{
-			win: 'checkmate',
-			type: 'blitz',
-			color: 'white',
-			opening: 'Fianchetto'
-		},
-		{
-			win: 'checkmate',
-			type: 'blitz',
-			color: 'white',
-			opening: 'Fianchetto'
-		},
-		{
-			win: 'checkmate',
-			type: 'blitz',
-			color: 'white',
-			opening: 'Fianchetto'
-		},
-		{
-			win: 'checkmate',
-			type: 'blitz',
-			color: 'white',
-			opening: 'Fianchetto'
-		}
-	];
 </script>
 
 <div class="table-container">
@@ -42,7 +16,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each data as row, i}
+			{#each data as row (`${row.date}-${row.rating}-${row.ratingOpponent}`)}
 				<tr>
 					<td>{row.date}</td>
 					<td class={row.result === 'win' ? 'text-secondary-700' : 'text-primary-500'}

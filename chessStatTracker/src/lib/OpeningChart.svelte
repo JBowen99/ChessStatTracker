@@ -16,7 +16,7 @@
 				ticks: {
 					maxRotation: 45,
 					minRotation: 45,
-					callback: function(value) {
+					callback: function (value) {
 						const label = this.getLabelForValue(value);
 						// Truncate long opening names
 						return label.length > 15 ? label.substr(0, 13) + '...' : label;
@@ -27,7 +27,7 @@
 				min: 0,
 				max: 100,
 				ticks: {
-					callback: function(value) {
+					callback: function (value) {
 						return value + '%';
 					}
 				}
@@ -66,7 +66,6 @@
 	};
 
 	import { Chart, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js';
-	import Page from '../routes/+page.svelte';
 
 	Chart.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
 </script>

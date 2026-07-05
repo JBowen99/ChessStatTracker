@@ -3,8 +3,6 @@
 	// Import logo asset
 	import logo from '$lib/assets/logo3Black.svg';
 
-	import { onMount } from 'svelte';
-
 	// Import custom components and UI elements
 	import RatingChart from '$lib/RatingChart.svelte';
 	import { ProgressBar } from '@skeletonlabs/skeleton';
@@ -15,27 +13,23 @@
 
 	// Import API utility functions for fetching and processing chess data
 	import {
-		fetchMonthlyGames,
+		fetchGameData,
 		fetchUserStats,
 		processOpenings,
 		processRecentGames,
 		fetchUserProfile,
 		processResults,
-		processRivals
+		processRivals,
+		processRatingData
 	} from '$lib/api';
 
 	// Import icons from Lucide
-	import { ChartNoAxesColumnDecreasing, History, TrendingUp, Trophy, Swords, Award } from 'lucide-svelte';
+	import { ChartNoAxesColumnDecreasing, History, TrendingUp, Swords, Award } from 'lucide-svelte';
 
 	// Import additional chart components
 	import WinChart from '$lib/WinChart.svelte';
 	import OpeningChart from '$lib/OpeningChart.svelte';
 	import OpeningChartHorizontal from '$lib/OpeningChartHorizontal.svelte';
-	import { fetchGameData } from '$lib/api';
-	import { processRatingData } from '$lib/api';
-
-	// Get current date for data filtering
-	const currentDate = new Date();
 
 	// State variables for user input and error handling
 	let username = '';
@@ -43,9 +37,6 @@
 
 	// Loading state for API calls
 	let loading = false;
-
-	// Time period for chart data display
-	let chartDataTime = 'month';
 
 	// Chart configuration options
 	let options = {
@@ -63,10 +54,6 @@
 			}
 		}
 	};
-
-	// Chart dimension settings
-	let chartWidth = 300;
-	let chartHeight = 400;
 
 	// Game time control settings
 	let time_class = 'bullet';
@@ -102,11 +89,9 @@
 	// State variables for various data displays
 	let stats = [];
 	let activity = [];
-	let chartData = {};
 	let initialized = false;
 
 	// Import additional stores and components
-	import { results } from '../stores/dataStore';
 	import RecentMatchesTable from '$lib/RecentMatchesTable.svelte';
 	import InfoButton from '$lib/InfoButton.svelte';
 
@@ -161,12 +146,6 @@
 		rivalsData = await processRivals(username, currentData ?? null, time_class);
 	}
 
-	// Function to fetch and update game data
-	async function updateGameData() {
-		gameData = await fetchGameData(username);
-		console.log(gameData);
-	}
-
 	// Reactive statement to update data when game data changes
 	$: {
 		console.log('game data updated: ', gameData);
@@ -181,9 +160,8 @@
 			initialized = false;
 
 			// Fetch user profile and validate existence
-			let userProfile = {};
 			try {
-				userProfile = await fetchUserProfile(username);
+				await fetchUserProfile(username);
 			} catch (error) {
 				console.log(error);
 				site_error = 'User does not exist';
@@ -204,10 +182,18 @@
 </script>
 
 <!-- Main container -->
-<div class="h-screen w-full flex justify-center items-center relative overflow-hidden scrollbar-hide">
-	<div class="z-0 absolute bottom-0 left-0 w-full h-3/4 rounded-full bg-gradient-to-b dark:from-red-500 dark:to-rose-200 from-rose-200 to-red-500 blur-3xl animate-gradient"></div>
-	<div class="z-50 absolute top-0 left-0 flex flex-col items-center w-full h-full {(initialized && site_error == null) ? '' : 'justify-center pb-10'} overflow-scroll scrollbar-hide">
-		
+<div
+	class="h-screen w-full flex justify-center items-center relative overflow-hidden scrollbar-hide"
+>
+	<div
+		class="z-0 absolute bottom-0 left-0 w-full h-3/4 rounded-full bg-gradient-to-b dark:from-red-500 dark:to-rose-200 from-rose-200 to-red-500 blur-3xl animate-gradient"
+	></div>
+	<div
+		class="z-50 absolute top-0 left-0 flex flex-col items-center w-full h-full {initialized &&
+		site_error == null
+			? ''
+			: 'justify-center pb-10'} overflow-scroll scrollbar-hide"
+	>
 		<!-- Username input section -->
 		<h1 class="h3 pt-10 mb-5">Enter your Chess.com Username</h1>
 		<div class="flex flex-row">
@@ -240,9 +226,13 @@
 		{:else if initialized}
 			<div class="flex flex-col w-full">
 				<!-- User info and filter controls -->
-				<div class="w-full flex flex-col space-y-3 space-x-0 xl:space-x-3 xl:space-y-0 xl:flex-row justify-center xl:justify-start items-center px-10 mt-10">
+				<div
+					class="w-full flex flex-col space-y-3 space-x-0 xl:space-x-3 xl:space-y-0 xl:flex-row justify-center xl:justify-start items-center px-10 mt-10"
+				>
 					<!-- User ratings display -->
-					<div class=" flex flex-col space-y-3 space-x-0 sm:flex-row justify-start items-center sm:space-y-0 sm:space-x-3">
+					<div
+						class=" flex flex-col space-y-3 space-x-0 sm:flex-row justify-start items-center sm:space-y-0 sm:space-x-3"
+					>
 						<div class="flex flex-row justify-start items-center space-x-3">
 							<div class="glass-card p-3 flex flex-row justify-start items-center">
 								<h1 class="mr-3">Bullet</h1>
@@ -263,8 +253,10 @@
 								<h1 class="code">{$userStats.chess_daily.last.rating}</h1>
 							</div>
 						</div>
-					</div>					
-					<div class="w-full flex flex-col space-y-3 md:space-y-0 md:flex-row justify-center xl:justify-end items-center">
+					</div>
+					<div
+						class="w-full flex flex-col space-y-3 md:space-y-0 md:flex-row justify-center xl:justify-end items-center"
+					>
 						<!-- Time class filter buttons -->
 						<h1 class="h5 mx-3 text-nowrap">Time Class:</h1>
 						<div class="flex flex-row justify-center items-center glass-card">
@@ -330,7 +322,9 @@
 							<WinChart data={resultsData} />
 						</div>
 						<!-- Rating chart -->
-						<div class="h-full min-h-[300px] glass-card p-3 col-span-1 md:col-span-2 md:row-start-2 lg:row-start-auto lg:col-span-3">
+						<div
+							class="h-full min-h-[300px] glass-card p-3 col-span-1 md:col-span-2 md:row-start-2 lg:row-start-auto lg:col-span-3"
+						>
 							<div class="card-header flex flex-row justify-center items-center my-3">
 								<TrendingUp color="#b80f42" class="mx-3" />
 								<h1 class="h4 mr-2">Rating</h1>
@@ -353,7 +347,7 @@
 					<!-- Win Rate/Opening row -->
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
 						<!-- Win rate chart - Hidden on md screens -->
-						<div class="h-full min-h-[300px] glass-card  p-3 col-span-1 md:hidden lg:block">
+						<div class="h-full min-h-[300px] glass-card p-3 col-span-1 md:hidden lg:block">
 							<WinChart data={resultsData} />
 						</div>
 						<!-- Opening performance chart -->
@@ -419,21 +413,28 @@
 					<div class="grid grid-cols-1 gap-3">
 						<PromoCard />
 					</div>
-					
+
 					<!-- Footer section -->
-					<div class="z-50 pb-4 px-4 mt-auto flex flex-row justify-center items-center text-center text-sm text-gray-800">
-						<p> ChessStatTracker <br class="block md:hidden"/> by Silver Stag Studios, LLC - Copyright {new Date().getFullYear()}</p>
+					<div
+						class="z-50 pb-4 px-4 mt-auto flex flex-row justify-center items-center text-center text-sm text-gray-800"
+					>
+						<p>
+							ChessStatTracker <br class="block md:hidden" /> by Silver Stag Studios, LLC -
+							Copyright {new Date().getFullYear()}
+						</p>
 					</div>
-					
 				</div>
 			</div>
 		{/if}
-		
 	</div>
 	{#if !initialized}
 		<!-- Footer section -->
-		<div class="z-50 pb-4 px-4 mt-auto flex flex-row justify-center items-center text-center text-sm text-gray-800">
-			<p> ChessStatTracker <br class="block md:hidden"/> by Silver Stag Studios, LLC - Copyright {new Date().getFullYear()}</p>
+		<div
+			class="z-50 pb-4 px-4 mt-auto flex flex-row justify-center items-center text-center text-sm text-gray-800"
+		>
+			<p>
+				ChessStatTracker <br class="block md:hidden" /> by Silver Stag Studios, LLC - Copyright {new Date().getFullYear()}
+			</p>
 		</div>
 	{/if}
 </div>

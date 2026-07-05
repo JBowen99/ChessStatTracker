@@ -17,7 +17,7 @@
 				min: 0,
 				max: 100,
 				ticks: {
-					callback: function(value) {
+					callback: function (value) {
 						return value + '%';
 					}
 				}
@@ -27,7 +27,7 @@
 					autoSkip: false,
 					maxRotation: 0,
 					minRotation: 0,
-					callback: function(value) {
+					callback: function (value) {
 						const label = this.getLabelForValue(value);
 						// Truncate long opening names
 						return label.length > 25 ? label.substr(0, 23) + '...' : label;
@@ -74,4 +74,4 @@
 
 <div class="w-full h-[400px]">
 	<Bar data={chartData} {options} />
-</div> 
+</div>

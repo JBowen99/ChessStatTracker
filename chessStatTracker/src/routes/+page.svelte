@@ -20,7 +20,8 @@
 		fetchUserProfile,
 		processResults,
 		processRivals,
-		processRatingData
+		processRatingData,
+		ChessApiError
 	} from '$lib/api';
 
 	// Import icons from Lucide
@@ -33,10 +34,30 @@
 
 	// State variables for user input and error handling
 	let username = '';
-	let site_error = '';
+	let site_error = null;
+	let loadRequestId = 0;
+	let activeController = null;
 
 	// Loading state for API calls
 	let loading = false;
+
+	$: showDashboard = initialized && !site_error;
+	$: trimmedUsername = username.trim();
+	$: hasRecentGames =
+		(gameData?.currentMonth?.length ?? 0) > 0 ||
+		(gameData?.threeMonths?.length ?? 0) > 0 ||
+		(gameData?.sixMonths?.length ?? 0) > 0 ||
+		(gameData?.year?.length ?? 0) > 0;
+
+	function getRating(category) {
+		return $userStats?.[category]?.last?.rating ?? '—';
+	}
+
+	function clearError() {
+		if (site_error) {
+			site_error = null;
+		}
+	}
 
 	// Chart configuration options
 	let options = {
@@ -105,78 +126,117 @@
 
 	// Function to update all data displays based on current filters
 	async function updateData() {
-		// Process and update activity data
-		let activityData = await processRatingData(username, gameData.currentMonth ?? null, time_class);
-		if (activityData) {
-			activity = activityData.map((data) => {
-				const day = new Date(data.date).getDate();
-				const activity = data.activity;
-				const winRate = data.winRate;
-				const drawRate = data.drawRate;
-				const lossRate = data.lossRate;
-				return { day, activity, winRate, drawRate, lossRate };
-			});
+		try {
+			const activityData = await processRatingData(
+				username,
+				gameData.currentMonth ?? null,
+				time_class
+			);
+			if (activityData) {
+				activity = activityData.map((data) => {
+					const day = new Date(data.date).getDate();
+					return {
+						day,
+						activity: data.activity,
+						winRate: data.winRate,
+						drawRate: data.drawRate,
+						lossRate: data.lossRate
+					};
+				});
+			} else {
+				activity = [];
+			}
+
+			recentGames = (await processRecentGames(username, currentData ?? null, time_class)) ?? [];
+			resultsData = (await processResults(username, currentData ?? null, time_class)) ?? [];
+			openingData = (await processOpenings(username, currentData ?? null, time_class)) ?? [];
+
+			stats = (await processRatingData(username, currentData ?? null, time_class)) ?? [];
+			if (!stats.length) {
+				const statsKey = `chess_${time_class}`;
+				const tempData = $userStats?.[statsKey];
+				if (tempData?.last) {
+					stats = [
+						{ date: tempData.last.date, rating: tempData.last.rating },
+						{ date: tempData.last.date, rating: tempData.last.rating }
+					];
+				}
+			}
+
+			rivalsData = await processRivals(username, currentData ?? null, time_class);
+		} catch (error) {
+			console.error('Failed to process game data', error);
 		}
-
-		// Update recent games, results, and opening data
-		recentGames = await processRecentGames(username, currentData ?? null, time_class);
-		console.log('recent games2:', recentGames);
-		resultsData = await processResults(username, currentData ?? null, time_class);
-
-		openingData = await processOpenings(username, currentData ?? null, time_class);
-		console.log('opening data, ', openingData);
-
-		// Process and update rating stats
-		stats = await processRatingData(username, currentData ?? null, time_class);
-		if (stats?.length == 0) {
-			let tempData = [];
-			if (time_class == 'bullet') tempData = $userStats.chess_bullet;
-			else if (time_class == 'blitz') tempData = $userStats.chess_blitz;
-			else if (time_class == 'rapid') tempData = $userStats.chess_rapid;
-			else if (time_class == 'daily') tempData = $userStats.chess_daily;
-			let tempStats = [
-				{ date: tempData.last.date, rating: tempData.last.rating },
-				{ date: tempData.last.date, rating: tempData.last.rating }
-			];
-			stats = tempStats;
-		}
-		console.log('stats: ', stats);
-
-		// Add rivals data processing
-		rivalsData = await processRivals(username, currentData ?? null, time_class);
 	}
 
 	// Reactive statement to update data when game data changes
-	$: {
-		console.log('game data updated: ', gameData);
+	$: if (showDashboard) {
 		updateData();
+	}
+
+	function getErrorMessage(error) {
+		if (error instanceof ChessApiError) {
+			return error.message;
+		}
+		if (
+			error &&
+			typeof error === 'object' &&
+			'name' in error &&
+			error.name === 'ChessApiError' &&
+			'message' in error
+		) {
+			return String(error.message);
+		}
+		return 'Something went wrong while loading stats. Please try again.';
+	}
+
+	function cancelActiveRequest() {
+		activeController?.abort();
+		activeController = null;
 	}
 
 	// Main function to fetch user data and initialize the dashboard
 	async function getGameData() {
-		if (!loading) {
-			loading = true;
-			site_error = null;
+		if (!trimmedUsername) {
+			site_error = 'Please enter a Chess.com username.';
 			initialized = false;
+			return;
+		}
 
-			// Fetch user profile and validate existence
-			try {
-				await fetchUserProfile(username);
-			} catch (error) {
-				console.log(error);
-				site_error = 'User does not exist';
-				loading = false;
-				initialized = true;
-				return;
-			}
+		cancelActiveRequest();
+		const controller = new AbortController();
+		activeController = controller;
+		const requestId = ++loadRequestId;
 
-			// Fetch game data and user stats
-			gameData = await fetchGameData(username);
-			userStats.set(await fetchUserStats(username));
+		loading = true;
+		site_error = null;
+		initialized = false;
 
-			loading = false;
+		try {
+			await fetchUserProfile(trimmedUsername, controller.signal);
+			if (requestId !== loadRequestId) return;
+
+			username = trimmedUsername;
+			gameData = await fetchGameData(trimmedUsername, controller.signal);
+			if (requestId !== loadRequestId) return;
+
+			userStats.set(await fetchUserStats(trimmedUsername, controller.signal));
+			if (requestId !== loadRequestId) return;
+
 			initialized = true;
-			console.log('game data: ', gameData);
+		} catch (error) {
+			if (requestId !== loadRequestId) return;
+			if (error instanceof DOMException && error.name === 'AbortError') return;
+
+			gameData = {};
+			userStats.set({});
+			site_error = getErrorMessage(error);
+			initialized = false;
+		} finally {
+			if (requestId === loadRequestId) {
+				loading = false;
+				activeController = null;
+			}
 		}
 	}
 </script>
@@ -189,42 +249,76 @@
 		class="z-0 absolute bottom-0 left-0 w-full h-3/4 rounded-full bg-gradient-to-b dark:from-red-500 dark:to-rose-200 from-rose-200 to-red-500 blur-3xl animate-gradient"
 	></div>
 	<div
-		class="z-50 absolute top-0 left-0 flex flex-col items-center w-full h-full {initialized &&
-		site_error == null
-			? ''
-			: 'justify-center pb-10'} overflow-scroll scrollbar-hide"
+		class="z-50 absolute top-0 left-0 flex flex-col items-center w-full h-full overflow-y-auto scrollbar-hide"
 	>
 		<!-- Username input section -->
-		<h1 class="h3 pt-10 mb-5">Enter your Chess.com Username</h1>
-		<div class="flex flex-row">
-			<label class="label">
-				<input class="input" type="text" bind:value={username} placeholder="username" />
-			</label>
+		<form
+			class="flex flex-col items-center w-full max-w-lg px-4 pt-10 shrink-0"
+			on:submit|preventDefault={getGameData}
+		>
+			<h1 class="h3 mb-5">Enter your Chess.com Username</h1>
+			<div class="flex flex-row items-center w-full gap-2">
+				<label class="label flex-1">
+					<input
+						class="input {site_error ? 'border-primary-500 ring-2 ring-primary-500/50' : ''}"
+						type="text"
+						name="username"
+						bind:value={username}
+						on:input={clearError}
+						placeholder="username"
+						autocomplete="username"
+						aria-invalid={site_error ? 'true' : 'false'}
+						aria-describedby={site_error ? 'username-error' : undefined}
+					/>
+				</label>
 
-			<!-- Submit button with logo -->
-			<button type="button" class="btn-icon variant-filled-primary mx-2" on:click={getGameData}>
-				<img
-					src={logo}
-					alt="Logo"
-					style="width: 100%; height: 100%; object-fit: contain;"
-					class="p-2"
-				/>
-			</button>
-		</div>
-
-		<!-- Loading indicator -->
-		{#if loading}
-			<div class="flex flex-col w-1/2 mt-10">
-				<p>Loading Stats...</p>
-				<ProgressBar value={undefined} />
+				<button
+					type="submit"
+					class="btn-icon variant-filled-primary shrink-0 {loading ? 'opacity-70' : ''}"
+					aria-label={loading ? 'Loading player stats' : 'Load player stats'}
+					aria-busy={loading}
+				>
+					{#if loading}
+						<span class="text-xs font-bold animate-pulse">...</span>
+					{:else}
+						<img
+							src={logo}
+							alt=""
+							style="width: 100%; height: 100%; object-fit: contain;"
+							class="p-2"
+						/>
+					{/if}
+				</button>
 			</div>
-		{/if}
 
-		<!-- Error message or main dashboard content -->
-		{#if site_error != null}
-			<p class="pt-10">{site_error}</p>
-		{:else if initialized}
+			{#if loading}
+				<div class="flex flex-col w-full mt-4">
+					<p class="text-center text-sm opacity-80">Loading stats for {trimmedUsername}...</p>
+					<ProgressBar value={undefined} />
+				</div>
+			{/if}
+
+			{#if site_error}
+				<div
+					id="username-error"
+					role="alert"
+					class="w-full mt-4 p-4 text-center rounded-container-token bg-primary-500/15 border-2 border-primary-500 text-primary-700 dark:text-primary-300 font-medium"
+				>
+					{site_error}
+				</div>
+			{/if}
+		</form>
+
+		<!-- Main dashboard content -->
+		{#if showDashboard}
 			<div class="flex flex-col w-full">
+				{#if !hasRecentGames}
+					<div
+						class="w-full max-w-3xl mx-auto mt-6 px-4 py-3 text-center rounded-container-token bg-surface-200/60 dark:bg-surface-700/40 border border-surface-400/30"
+					>
+						No games found in the last 12 months. Rating cards below use historical Chess.com stats.
+					</div>
+				{/if}
 				<!-- User info and filter controls -->
 				<div
 					class="w-full flex flex-col space-y-3 space-x-0 xl:space-x-3 xl:space-y-0 xl:flex-row justify-center xl:justify-start items-center px-10 mt-10"
@@ -236,21 +330,21 @@
 						<div class="flex flex-row justify-start items-center space-x-3">
 							<div class="glass-card p-3 flex flex-row justify-start items-center">
 								<h1 class="mr-3">Bullet</h1>
-								<h1 class="code">{$userStats.chess_bullet.last.rating}</h1>
+								<h1 class="code">{getRating('chess_bullet')}</h1>
 							</div>
 							<div class="glass-card p-3 flex flex-row justify-start items-center">
 								<h1 class="mr-3">Blitz</h1>
-								<h1 class="code">{$userStats.chess_blitz.last.rating}</h1>
+								<h1 class="code">{getRating('chess_blitz')}</h1>
 							</div>
 						</div>
 						<div class="flex flex-row justify-start items-center space-x-3">
 							<div class="glass-card p-3 flex flex-row justify-start items-center">
 								<h1 class="mr-3">Rapid</h1>
-								<h1 class="code">{$userStats.chess_rapid.last.rating}</h1>
+								<h1 class="code">{getRating('chess_rapid')}</h1>
 							</div>
 							<div class="glass-card p-3 flex flex-row justify-start items-center">
 								<h1 class="mr-3">Daily</h1>
-								<h1 class="code">{$userStats.chess_daily.last.rating}</h1>
+								<h1 class="code">{getRating('chess_daily')}</h1>
 							</div>
 						</div>
 					</div>
@@ -427,7 +521,7 @@
 			</div>
 		{/if}
 	</div>
-	{#if !initialized}
+	{#if !showDashboard}
 		<!-- Footer section -->
 		<div
 			class="z-50 pb-4 px-4 mt-auto flex flex-row justify-center items-center text-center text-sm text-gray-800"

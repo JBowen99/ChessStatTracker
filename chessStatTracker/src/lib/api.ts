@@ -12,35 +12,127 @@ import type {
 	YearMonth
 } from './chess.types';
 
-export async function fetchUserStats(username: string): Promise<Record<string, unknown>> {
-	const response = await fetch(`https://api.chess.com/pub/player/${username}/stats`);
-	if (!response.ok) {
-		throw new Error('Failed to fetch user stats');
+export type ChessApiErrorCode = 'invalid' | 'not_found' | 'network' | 'unknown';
+
+export class ChessApiError extends Error {
+	code: ChessApiErrorCode;
+
+	constructor(message: string, code: ChessApiErrorCode) {
+		super(message);
+		this.name = 'ChessApiError';
+		this.code = code;
 	}
-	return response.json();
 }
 
-export async function fetchUserProfile(username: string): Promise<Record<string, unknown>> {
-	const response = await fetch(`https://api.chess.com/pub/player/${username}`);
-	if (response.ok) {
-		return response.json();
+function playerUrl(username: string, path = ''): string {
+	return `https://api.chess.com/pub/player/${encodeURIComponent(username)}${path}`;
+}
+
+async function fetchChessJson<T>(
+	url: string,
+	notFoundMessage: string,
+	signal?: AbortSignal,
+	timeoutMs = 15000
+): Promise<T> {
+	const timeoutController = new AbortController();
+	const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+
+	if (signal) {
+		if (signal.aborted) {
+			clearTimeout(timeoutId);
+			throw new DOMException('Aborted', 'AbortError');
+		}
+		signal.addEventListener('abort', () => timeoutController.abort(), { once: true });
 	}
-	throw new Error('Failed to fetch user stats');
+
+	try {
+		const response = await fetch(url, { signal: timeoutController.signal });
+		if (response.status === 404) {
+			throw new ChessApiError(notFoundMessage, 'not_found');
+		}
+		if (!response.ok) {
+			throw new ChessApiError('Could not reach Chess.com. Please try again later.', 'network');
+		}
+
+		const data: unknown = await response.json();
+		if (
+			data &&
+			typeof data === 'object' &&
+			'code' in data &&
+			(data as { code: number }).code === 0
+		) {
+			const message =
+				'message' in data && typeof (data as { message: unknown }).message === 'string'
+					? (data as { message: string }).message
+					: notFoundMessage;
+			throw new ChessApiError(message, 'not_found');
+		}
+
+		return data as T;
+	} catch (error) {
+		if (error instanceof DOMException && error.name === 'AbortError') {
+			throw error;
+		}
+		if (error instanceof ChessApiError) {
+			throw error;
+		}
+		throw new ChessApiError(
+			'Could not reach Chess.com. Check your connection and try again.',
+			'network'
+		);
+	} finally {
+		clearTimeout(timeoutId);
+	}
+}
+
+export async function fetchUserStats(
+	username: string,
+	signal?: AbortSignal
+): Promise<Record<string, unknown>> {
+	return fetchChessJson(
+		playerUrl(username, '/stats'),
+		'Could not load stats for this player.',
+		signal
+	);
+}
+
+export async function fetchUserProfile(
+	username: string,
+	signal?: AbortSignal
+): Promise<Record<string, unknown>> {
+	const trimmed = username.trim();
+	if (!trimmed) {
+		throw new ChessApiError('Please enter a Chess.com username.', 'invalid');
+	}
+
+	const profile = await fetchChessJson<Record<string, unknown>>(
+		playerUrl(trimmed),
+		`"${trimmed}" was not found on Chess.com. Check the spelling and try again.`,
+		signal
+	);
+
+	if (!profile.username && !profile.player_id) {
+		throw new ChessApiError(
+			`"${trimmed}" was not found on Chess.com. Check the spelling and try again.`,
+			'not_found'
+		);
+	}
+
+	return profile;
 }
 
 export async function fetchMonthlyGames(
 	username: string,
 	year: string,
-	month: string
+	month: string,
+	signal?: AbortSignal
 ): Promise<ChessGame[]> {
-	const response = await fetch(
-		`https://api.chess.com/pub/player/${username}/games/${year}/${month}`
+	const gameData = await fetchChessJson<{ games: ChessGame[] }>(
+		playerUrl(username, `/games/${year}/${month}`),
+		'Failed to fetch games',
+		signal
 	);
-	if (!response.ok) {
-		throw new Error('Failed to fetch games');
-	}
-	const gameData: { games: ChessGame[] } = await response.json();
-	return gameData.games;
+	return gameData.games ?? [];
 }
 
 function extractYearAndMonth(urls: string[]): YearMonth[] {
@@ -52,13 +144,16 @@ function extractYearAndMonth(urls: string[]): YearMonth[] {
 	});
 }
 
-export async function fetchGamesArchive(username: string): Promise<YearMonth[]> {
-	const response = await fetch(`https://api.chess.com/pub/player/${username}/games/archives`);
-	if (!response.ok) {
-		throw new Error('Failed to fetch game list');
-	}
-	const archiveURLs: { archives: string[] } = await response.json();
-	return extractYearAndMonth(archiveURLs.archives);
+export async function fetchGamesArchive(
+	username: string,
+	signal?: AbortSignal
+): Promise<YearMonth[]> {
+	const data = await fetchChessJson<{ archives?: string[] }>(
+		playerUrl(username, '/games/archives'),
+		'Failed to fetch game archives.',
+		signal
+	);
+	return extractYearAndMonth(data.archives ?? []);
 }
 
 export async function fetchGamesForAllMonths(
@@ -83,25 +178,42 @@ function getPreviousMonthYear(monthOffset = 0): YearMonth {
 	return { month, year };
 }
 
-export async function fetchGameData(username: string): Promise<GameDataBundle> {
-	const monthsToFetch = new Set<string>();
+export async function fetchGameData(
+	username: string,
+	signal?: AbortSignal
+): Promise<GameDataBundle> {
+	const recentMonths = Array.from({ length: 12 }, (_, i) => getPreviousMonthYear(i));
+	const monthData: Record<string, ChessGame[]> = Object.fromEntries(
+		recentMonths.map(({ year, month }) => [`${year}-${month}`, []])
+	);
 
-	for (let i = 0; i < 12; i++) {
-		const { month, year } = getPreviousMonthYear(i);
-		monthsToFetch.add(`${year}-${month}`);
-	}
-
-	const monthData: Record<string, ChessGame[]> = {};
-
-	for (const key of monthsToFetch) {
-		const [year, month] = key.split('-');
-		try {
-			monthData[key] = await fetchMonthlyGames(username, year, month);
-		} catch (e) {
-			console.log('Error: ', e);
-			monthData[key] = [];
+	let archives: YearMonth[] = [];
+	try {
+		archives = await fetchGamesArchive(username, signal);
+	} catch (error) {
+		if (error instanceof DOMException && error.name === 'AbortError') {
+			throw error;
 		}
 	}
+
+	const archiveKeys = new Set(archives.map(({ year, month }) => `${year}-${month}`));
+	const monthsToFetch = recentMonths.filter(({ year, month }) =>
+		archiveKeys.has(`${year}-${month}`)
+	);
+
+	await Promise.all(
+		monthsToFetch.map(async ({ year, month }) => {
+			const key = `${year}-${month}`;
+			try {
+				monthData[key] = await fetchMonthlyGames(username, year, month, signal);
+			} catch (error) {
+				if (error instanceof DOMException && error.name === 'AbortError') {
+					throw error;
+				}
+				monthData[key] = [];
+			}
+		})
+	);
 
 	const currentMonthKey = `${getPreviousMonthYear(0).year}-${getPreviousMonthYear(0).month}`;
 	const currentMonthData = [...(monthData[currentMonthKey] ?? [])];
